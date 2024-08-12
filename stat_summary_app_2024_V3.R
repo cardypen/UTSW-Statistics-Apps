@@ -198,7 +198,7 @@ ui <- navbarPage(theme = shinytheme("cerulean"), title = "Basic Statistics Calcu
                  ),
                  
                  # Second panel to display analysis results ----
-                 tabPanel(title = "Analysis",
+                 tabPanel(title = "Report",
                           
                           sidebarLayout(
                             sidebarPanel( 
@@ -225,23 +225,7 @@ ui <- navbarPage(theme = shinytheme("cerulean"), title = "Basic Statistics Calcu
                             ),
                             mainPanel(
                               #Help text statement ----
-                              h4(strong('Interpreting Results:')),
-                              
-                              #Help text statement ----
                               helpText("Results may take a few seconds to load. A description of the methods and results can be found below."),
-                              
-                              # Horizontal line ----
-                              tags$hr(),
-                              
-                              #h4(strong('Continuous Variable Results Table:')),
-                              h4(strong('Results Table:')),
-                              
-                              # downloadButton('download_word', 'Dowload Word'),
-                            
-                              
-                              # Output results table with loader ----   
-                              
-                              withSpinner(gt::gt_output('table')),
                               
                               # Horizontal line ----
                               tags$hr(),
@@ -258,7 +242,22 @@ ui <- navbarPage(theme = shinytheme("cerulean"), title = "Basic Statistics Calcu
                               #Help text statement ----
                               h4(strong('Results:')),
                               
-                              uiOutput('resultstxt'),
+                              uiOutput('resultstxt'),                              
+                              
+                              # Horizontal line ----
+                              tags$hr(),
+                              
+                              #h4(strong('Continuous Variable Results Table:')),
+                              h4(strong('Table:')),
+                              
+                              # downloadButton('download_word', 'Dowload Word'),
+                            
+                              
+                              # Output results table with loader ----   
+                              
+                              withSpinner(gt::gt_output('table')),
+                              
+
                               
                               # Horizontal line ----
                               tags$hr(),
@@ -266,9 +265,7 @@ ui <- navbarPage(theme = shinytheme("cerulean"), title = "Basic Statistics Calcu
                               #Help text statement ----
                               h4(strong('How to Cite')),
                               
-                              helpText(p("All analyses were performed using R [1]. Tables were created using package gtsummary [2]."),
-                                       br(),
-                                       #h4(strong('References')),
+                              helpText(#h4(strong('References')),
                                        div("[1]",citation()),
                                        div("[2]","Sjoberg D, Whiting K, Curry M, Lavery J, Larmarange J (2021). “Reproducible Summary Tables with the gtsummary Package.” The R Journal, 13,
                                            570-580. doi:10.32614/RJ-2021-053, https://doi.org/10.32614/RJ-2021-053.")
@@ -411,119 +408,100 @@ server <- function(session, input, output) {
   
   output$methodstxt<-renderUI({
     
-    continuous_vars <- filtereddata2() %>%
-      select(where(is.numeric))
+    # continuous_vars <- filtereddata2() %>%
+    #   select(where(is.numeric))
+    # 
+    # categorical_vars <- filtereddata2() %>%
+    #   select(!where(is.numeric))
     
-    categorical_vars <- filtereddata2() %>%
-      select(where(is.factor))
+    tests_used <- gtObject()$`_footnotes`$footnotes[[length(gtObject()$`_footnotes`$footnotes)]][1] %>% gsub(";"," and",.)
     
-    cont_var_names<- input$selectcon[which(input$selectcon %in% colnames(continuous_vars) | input$selectcon %in% input$forcecon)]
-    cat_var_names<- input$selectcon[which(input$selectcon %in% colnames(categorical_vars) | input$selectcon %in% input$selectcat)]
+    # cont_var_names<- input$selectcon[which(input$selectcon %in% colnames(continuous_vars) | input$selectcon %in% input$forcecon)]
+    # cat_var_names<- input$selectcon[which(input$selectcon %in% colnames(categorical_vars) | input$selectcon %in% input$selectcat)]
     
-    
-    switch(input$selectgrp,
-           None = helpText(paste("The table shows summary statistics including ",
-                                 case_when("Mean ± SD" %in% input$metric & "Median (Q1,Q3)" %!in% input$metric~ "mean and standard deviation for continuous variables and proportion and percentage for categorical variables.",
-                                           "Mean ± SD" %!in% input$metric & "Median (Q1,Q3)" %in% input$metric~ "median and interquartile range for continuous variables and proportion and percentage for categorical variables.",
-                                           "Mean ± SD" %in% input$metric & "Median (Q1,Q3)" %in% input$metric~ "mean, standard deviation, median, and interquartile range for continuous variables and proportion and percentage for categorical variables."))),
-           helpText( case_when(
-             length(cont_var_names)>0 & length(cat_var_names)==0  ~ paste('For continuous variables, a', case_when(input$test_con=="Wilcoxon Rank Sum Test/Kruskal-Wallis Test"~" Kruskal-Wallis Test is performed. The null hypothesis for the Kruskal-Wallis Test analysis is that the distributions of the 
-                group levels are equal, and the alternative hypothesis is that at least one of the group level distributions are not equal
-                (the two-sided p-value is reported). The Kruskal-Wallis Test analyzes the ranks of the data, and its only assumption is that the data 
-                comes from identically shaped population distributions. It is robust to heavily skewed data and extreme outliers, but has less power than a One-way ANOVA 
-                when population standard deviation are approximately equal.",
-                                                                                                                   input$test_con=="Two-sample t-Test/One-Way ANOVA"~ " One-Way ANOVA is performed. The null hypothesis for the One-way ANOVA analysis is that of no difference between means of the 
-               group levels, and the alternative hypothesis is that a difference exists 
-               in at least one of the group level means (the two-sided p-value is reported). The key assumption for the One-way ANOVA 
-               method is that the population standard deviations are homogenous across group levels. 
-               This assumption can be checked by observing residual plots of residuals against their group averages.
-               Though this assumption is not always met in reality, the results from ANOVA can be assumed accurate 
-               as long as the data is not heavily skewed and there are no extreme outlying observations."), sep=""),
-             length(cont_var_names)==0 & length(cat_var_names)>0  ~ paste("For categorical variables, a",
-                                                                          case_when(input$test_cat== "Fisher Exact Test"~ " Fisher Exact Test was performed. The null hypothesis is that there is no association between the grouping variable and analysis variable, and the alternative is 
-                          that there is an association between the variables. This test is particularly useful when the sample size is small or one or more event is rare.",
-                                                                                    input$test_cat== "Chi Square Test"~ " Chi Square Test was performed. The null hypothesis is that there is no association between the grouping variable and analysis variable, and the alternative is 
-                          that there is an association between the variables.") , sep=""),
-             length(cont_var_names)>0 & length(cat_var_names)>0  ~ paste('For continuous variables, a', case_when(input$test_con=="Wilcoxon Rank Sum Test/Kruskal-Wallis Test"~" Kruskal-Wallis Test is performed. The null hypothesis for the Kruskal-Wallis Test analysis is that the distributions of the 
-                group levels are equal, and the alternative hypothesis is that at least one of the group level distributions are not equal
-                (the two-sided p-value is reported). The Kruskal-Wallis Test analyzes the ranks of the data, and its only assumption is that the data 
-                comes from identically shaped population distributions. It is robust to heavily skewed data and extreme outliers, but has less power than a One-way ANOVA 
-                when population standard deviation are approximately equal.",
-                                                                   input$test_con=="Two-sample t-Test/One-Way ANOVA"~ " One-Way ANOVA is performed. The null hypothesis for the One-way ANOVA analysis is that of no difference between means of the 
-               group levels, and the alternative hypothesis is that a difference exists 
-               in at least one of the group level means (the two-sided p-value is reported). The key assumption for the One-way ANOVA 
-               method is that the population standard deviations are homogenous across group levels. 
-               This assumption can be checked by observing residual plots of residuals against their group averages.
-               Though this assumption is not always met in reality, the results from ANOVA can be assumed accurate 
-               as long as the data is not heavily skewed and there are no extreme outlying observations."), "For categorical variables, a",
-                          case_when(input$test_cat== "Fisher Exact Test"~ " Fisher Exact Test was performed. The null hypothesis is that there is no association between the grouping variable and analysis variable, and the alternative is 
-                          that there is an association between the variables. This test is particularly useful when the sample size is small or one or more event is rare.",
-                                    input$test_cat== "Chi Square Test"~ " Chi Square Test was performed. The null hypothesis is that there is no association between the grouping variable and analysis variable, and the alternative is 
-                          that there is an association between the variables."))
-           )
+    paste0(if_else(str_detect(tests_used,"way|rank"),
+                   paste0(case_when("Mean ± SD" %in% input$metric & "Median (Q1,Q3)" %in% input$metric~ "Mean, standard deviation, median, and interquartile range for continuous variables",
+                                    "Mean ± SD" %in% input$metric ~ "Mean and standard deviation for continuous variables",
+                                    "Median (Q1,Q3)" %in% input$metric~ "Median, and interquartile range for continuous variables"),
+                          if_else(str_detect(tests_used,"isher|squar")," and p",".")),
+                   "P"),
+           if_else(str_detect(tests_used,"isher|squar"),
+                   paste0("roportion and percentage for categorical variables"),
+                   ""),
+           if_else(input$selectgrp=="None", " were reported. ",paste("  were reported by group level as well as overall.",
+                                                                     tests_used,
+                                                                     " were used to test the association between the group levels and the selected variables. The significance level was set at alpha=0.05. ")),
            
-           )
-    )
+           "All analyses were performed using R [1]. Tables were created using package gtsummary [2].")
   })
   
   
   output$resultstxt<-renderUI({
     
     
-    continuous_vars <- filtereddata2() %>%
-      select(where(is.numeric))
+    # continuous_vars <- filtereddata2() %>%
+    #   select(where(is.numeric))
+    # 
+    # categorical_vars <- filtereddata2() %>%
+    #   select(where(is.factor))
+    # 
+    # cont_var_names<- input$selectcon[which(input$selectcon %in% colnames(continuous_vars) | input$selectcon %in% input$forcecon)]
+    # cat_var_names<- input$selectcon[which(input$selectcon %in% colnames(categorical_vars) | input$selectcon %in% input$selectcat)]
+    # 
+    # 
+    # gt_df<-extract_cells(gtObject(), columns = contains('value'))
+    # gt_vec<- gt_df[which(gt_df>0 | gt_df==">0.9" | gt_df =="<0.001")]
     
-    categorical_vars <- filtereddata2() %>%
-      select(where(is.factor))
+    if(input$selectgrp != 'None'){
+          var_names <- gtObject()$`_data`$var_label
+          p_val <- gtObject()$`_data`$p.value
+          sig_var <- var_names[p_val < 0.05 & !is.na(p_val)]
+          pvals2 <- paste0("Significant associated with the grouping variable ",input$selectgrp," was detected in ",paste(sig_var, collapse = ", "),".")
+    }
     
-    cont_var_names<- input$selectcon[which(input$selectcon %in% colnames(continuous_vars) | input$selectcon %in% input$forcecon)]
-    cat_var_names<- input$selectcon[which(input$selectcon %in% colnames(categorical_vars) | input$selectcon %in% input$selectcat)]
+
     
-    
-    gt_df<-extract_cells(gtObject(), columns = contains('value'))
-    gt_vec<- gt_df[which(gt_df>0 | gt_df==">0.9" | gt_df =="<0.001")]
-    
-    p_var<-data.frame(cbind(input$selectcon, gt_vec)) %>% mutate(var_type = case_when(input$selectcon %in% cont_var_names | input$selectcon %in% input$forcecon ~ "continuous",
-                                                                                      input$selectcon %in% cat_var_names | input$selectcon %in% input$selectcat ~ "categorical"))
-    
-    sig_cont_var_names<- input$selectcon[which(input$selectcon[which((gt_vec =="<0.001" | gt_vec<0.05) & gt_vec != ">0.9")] %in% cont_var_names) ]
-    sig_cat_var_names<- input$selectcon[which(input$selectcon[which((gt_vec =="<0.001" | gt_vec<0.05) & gt_vec != ">0.9")] %in% cat_var_names) ]
-    
-    nonsig_cont_var_names<- cont_var_names[which(cont_var_names %!in% sig_cont_var_names)]
-    nonsig_cat_var_names<- cat_var_names[which(cat_var_names %!in% sig_cat_var_names)]
-    
-    
-    pvals<-0
-    for (i in 1:length(input$selectcon)) { 
-      pvals[i]<-paste("The p-value for ",input$selectcon[i]," is ",gt_vec[i],". This means that for alpha=0.05, ", 
-                      case_when(gt_vec[i]<0.05~"there is a significant difference"), sep = "")}
-    
-    significant_vars<-paste(input$selectcon[which((gt_vec =="<0.001" | gt_vec<0.05) & gt_vec != ">0.9")],collapse = ", ")
-    nonsignificant_vars<-paste(input$selectcon[which(gt_vec !="<0.001" & (gt_vec>0.05 | gt_vec == ">0.9"))],collapse = ", ")
-  
-    
-    pvals2<-case_when(length(which((gt_vec =="<0.001" | gt_vec<0.05) & gt_vec != ">0.9"))>0 & length(which(gt_vec !="<0.001" & (gt_vec>0.05 | gt_vec == ">0.9")))==0 ~ paste("For alpha=0.05, all variables analyzed have significant p-values.",
-                                                                                                                                                                             case_when(length(sig_cont_var_names)>0 & length(sig_cat_var_names)==0 ~ paste(" For continuous variables (",paste(sig_cont_var_names, collapse = ", "),") this means there is a statistically significant difference in the means of at least one group level.",sep = ""),
-                                                                                                                                                                                       length(sig_cont_var_names)==0 & length(sig_cat_var_names)>0 ~ paste(" For categorical variables (",paste(sig_cat_var_names, collapse = ", "),") this indicates an association between the grouping variable and the selected cateogrical variable; 
-                                                                                                                                                                                                                                                    that is, the two variables are not independent or the values of the categorical variable are not homogenous across group levels.",sep = ""),
-                                                                                                                                                                                       .default = paste(" For continuous variables (",paste(sig_cont_var_names, collapse = ", "),") this means there is a statistically significant difference in the means of at least one group level."," For categorical variables (",paste(sig_cat_var_names, collapse = ", "),") this indicates an association between the grouping variable and the selected cateogrical variable; 
-                                                                                                                                                                                                                                                    that is, the two variables are not independent or the values of the categorical variable are not homogenous across group levels.",sep = "")), sep = ""),
-      length(which((gt_vec =="<0.001" | gt_vec<0.05) & gt_vec != ">0.9"))==0 & length(which(gt_vec !="<0.001" & (gt_vec>0.05 | gt_vec == ">0.9")))>0 ~ paste("For alpha=0.05, no variables analyzed have significant p-values.",
-                                                                                                                                                             case_when(length(nonsig_cont_var_names)>0 & length(nonsig_cat_var_names)==0 ~ paste(" For continuous variables (",paste(nonsig_cont_var_names, collapse = ", "),") this means there is not a statistically significant difference in the means of any group level.",sep = ""),
-                                                                                                                                                                       length(nonsig_cont_var_names)==0 & length(nonsig_cat_var_names)>0 ~ paste(" For categorical variables (",paste(nonsig_cat_var_names, collapse = ", "),") there is not sufficient evidence of an association between the grouping variable and the selected cateogrical variable.",sep = ""),
-                                                                                                                                                                       .default = paste(" For continuous variables (",paste(nonsig_cont_var_names, collapse = ", "),") this means there is not a statistically significant difference in the means of any group level."," For categorical variables (",paste(nonsig_cat_var_names, collapse = ", "),") this indicates there is not sufficient evidence of an association between the grouping variable and the selected cateogrical variable.",sep = ""))
-                                                                                                                                                             ,sep=""),
-      length(which((gt_vec =="<0.001" | gt_vec<0.05) & gt_vec != ">0.9"))>0 & length(which(gt_vec !="<0.001" & (gt_vec>0.05 | gt_vec == ">0.9")))>0 ~ paste("For alpha=0.05, the following variables have significant p-values: ",paste(significant_vars, collapse = ", "),".",
-                                                                                                                                                            case_when(length(sig_cont_var_names)>0 & length(sig_cat_var_names)==0 ~ paste(" For continuous variables (",paste(sig_cont_var_names, collapse = ", "),") this means there is a statistically significant difference in the means of at least one group level.",sep = ""),
-                                                                                                                                                                      length(sig_cont_var_names)==0 & length(sig_cat_var_names)>0 ~ paste(" For categorical variables (",paste(sig_cat_var_names, collapse = ", "),") this indicates an association between the grouping variable and the selected cateogrical variable; 
-                                                                                                                                                                                                                                                    that is, the two variables are not independent or the values of the categorical variable are not homogenous across group levels.",sep = ""),
-                                                                                                                                                                      .default = paste(" For continuous variables (",paste(sig_cont_var_names, collapse = ", "),") this means there is a statistically significant difference in the means of at least one group level."," For categorical variables (",paste(sig_cat_var_names, collapse = ", "),") this indicates an association between the grouping variable and the selected cateogrical variable; 
-                                                                                                                                                                                                                                                    that is, the two variables are not independent or the values of the categorical variable are not homogenous across group levels.",sep = "")),
-                                                                                                                                                            " However, the following variables did not have significant p-values: ",paste(nonsignificant_vars, collapse = ", "),".",
-                                                                                                                                                            case_when(length(nonsig_cont_var_names)>0 & length(nonsig_cat_var_names)==0 ~ paste(" For continuous variables (",paste(nonsig_cont_var_names, collapse = ", "),") this means there is not a statistically significant difference in the means of any group level.",sep = ""),
-                                                                                                                                                                      length(nonsig_cont_var_names)==0 & length(nonsig_cat_var_names)>0 ~ paste(" For categorical variables (",paste(nonsig_cat_var_names, collapse = ", "),") there is not sufficient evidence of an association between the grouping variable and the selected cateogrical variable.",sep = ""),
-                                                                                                                                                                      .default = paste(" For continuous variables (",paste(nonsig_cont_var_names, collapse = ", "),") this means there is not a statistically significant difference in the means of any group level."," For categorical variables (",paste(nonsig_cat_var_names, collapse = ", "),") this indicates there is not sufficient evidence of an association between the grouping variable and the selected cateogrical variable.",sep = "")), sep = ""))
-    
+    # p_var<-data.frame(cbind(input$selectcon, gt_vec)) %>% mutate(var_type = case_when(input$selectcon %in% cont_var_names | input$selectcon %in% input$forcecon ~ "continuous",
+    #                                                                                   input$selectcon %in% cat_var_names | input$selectcon %in% input$selectcat ~ "categorical"))
+    # 
+    # sig_cont_var_names<- input$selectcon[which(input$selectcon[which((gt_vec =="<0.001" | gt_vec<0.05) & gt_vec != ">0.9")] %in% cont_var_names) ]
+    # sig_cat_var_names<- input$selectcon[which(input$selectcon[which((gt_vec =="<0.001" | gt_vec<0.05) & gt_vec != ">0.9")] %in% cat_var_names) ]
+    # 
+    # nonsig_cont_var_names<- cont_var_names[which(cont_var_names %!in% sig_cont_var_names)]
+    # nonsig_cat_var_names<- cat_var_names[which(cat_var_names %!in% sig_cat_var_names)]
+    # 
+    # 
+    # pvals<-0
+    # for (i in 1:length(input$selectcon)) { 
+    #   pvals[i]<-paste("The p-value for ",input$selectcon[i]," is ",gt_vec[i],". This means that for alpha=0.05, ", 
+    #                   case_when(gt_vec[i]<0.05~"there is a significant difference"), sep = "")}
+    # 
+    # significant_vars<-paste(input$selectcon[which((gt_vec =="<0.001" | gt_vec<0.05) & gt_vec != ">0.9")],collapse = ", ")
+    # nonsignificant_vars<-paste(input$selectcon[which(gt_vec !="<0.001" & (gt_vec>0.05 | gt_vec == ">0.9"))],collapse = ", ")
+    # 
+    # 
+    # pvals2<-case_when(length(which((gt_vec =="<0.001" | gt_vec<0.05) & gt_vec != ">0.9"))>0 & length(which(gt_vec !="<0.001" & (gt_vec>0.05 | gt_vec == ">0.9")))==0 ~ paste("For alpha=0.05, all variables analyzed have significant p-values.",
+    #                                                                                                                                                                          case_when(length(sig_cont_var_names)>0 & length(sig_cat_var_names)==0 ~ paste(" For continuous variables (",paste(sig_cont_var_names, collapse = ", "),") this means there is a statistically significant difference in the means of at least one group level.",sep = ""),
+    #                                                                                                                                                                                    length(sig_cont_var_names)==0 & length(sig_cat_var_names)>0 ~ paste(" For categorical variables (",paste(sig_cat_var_names, collapse = ", "),") this indicates an association between the grouping variable and the selected cateogrical variable; 
+    #                                                                                                                                                                                                                                                 that is, the two variables are not independent or the values of the categorical variable are not homogenous across group levels.",sep = ""),
+    #                                                                                                                                                                                    .default = paste(" For continuous variables (",paste(sig_cont_var_names, collapse = ", "),") this means there is a statistically significant difference in the means of at least one group level."," For categorical variables (",paste(sig_cat_var_names, collapse = ", "),") this indicates an association between the grouping variable and the selected cateogrical variable; 
+    #                                                                                                                                                                                                                                                 that is, the two variables are not independent or the values of the categorical variable are not homogenous across group levels.",sep = "")), sep = ""),
+    #   length(which((gt_vec =="<0.001" | gt_vec<0.05) & gt_vec != ">0.9"))==0 & length(which(gt_vec !="<0.001" & (gt_vec>0.05 | gt_vec == ">0.9")))>0 ~ paste("For alpha=0.05, no variables analyzed have significant p-values.",
+    #                                                                                                                                                          case_when(length(nonsig_cont_var_names)>0 & length(nonsig_cat_var_names)==0 ~ paste(" For continuous variables (",paste(nonsig_cont_var_names, collapse = ", "),") this means there is not a statistically significant difference in the means of any group level.",sep = ""),
+    #                                                                                                                                                                    length(nonsig_cont_var_names)==0 & length(nonsig_cat_var_names)>0 ~ paste(" For categorical variables (",paste(nonsig_cat_var_names, collapse = ", "),") there is not sufficient evidence of an association between the grouping variable and the selected cateogrical variable.",sep = ""),
+    #                                                                                                                                                                    .default = paste(" For continuous variables (",paste(nonsig_cont_var_names, collapse = ", "),") this means there is not a statistically significant difference in the means of any group level."," For categorical variables (",paste(nonsig_cat_var_names, collapse = ", "),") this indicates there is not sufficient evidence of an association between the grouping variable and the selected cateogrical variable.",sep = ""))
+    #                                                                                                                                                          ,sep=""),
+    #   length(which((gt_vec =="<0.001" | gt_vec<0.05) & gt_vec != ">0.9"))>0 & length(which(gt_vec !="<0.001" & (gt_vec>0.05 | gt_vec == ">0.9")))>0 ~ paste("For alpha=0.05, the following variables have significant p-values: ",paste(significant_vars, collapse = ", "),".",
+    #                                                                                                                                                         case_when(length(sig_cont_var_names)>0 & length(sig_cat_var_names)==0 ~ paste(" For continuous variables (",paste(sig_cont_var_names, collapse = ", "),") this means there is a statistically significant difference in the means of at least one group level.",sep = ""),
+    #                                                                                                                                                                   length(sig_cont_var_names)==0 & length(sig_cat_var_names)>0 ~ paste(" For categorical variables (",paste(sig_cat_var_names, collapse = ", "),") this indicates an association between the grouping variable and the selected cateogrical variable; 
+    #                                                                                                                                                                                                                                                 that is, the two variables are not independent or the values of the categorical variable are not homogenous across group levels.",sep = ""),
+    #                                                                                                                                                                   .default = paste(" For continuous variables (",paste(sig_cont_var_names, collapse = ", "),") this means there is a statistically significant difference in the means of at least one group level."," For categorical variables (",paste(sig_cat_var_names, collapse = ", "),") this indicates an association between the grouping variable and the selected cateogrical variable; 
+    #                                                                                                                                                                                                                                                 that is, the two variables are not independent or the values of the categorical variable are not homogenous across group levels.",sep = "")),
+    #                                                                                                                                                         " However, the following variables did not have significant p-values: ",paste(nonsignificant_vars, collapse = ", "),".",
+    #                                                                                                                                                         case_when(length(nonsig_cont_var_names)>0 & length(nonsig_cat_var_names)==0 ~ paste(" For continuous variables (",paste(nonsig_cont_var_names, collapse = ", "),") this means there is not a statistically significant difference in the means of any group level.",sep = ""),
+    #                                                                                                                                                                   length(nonsig_cont_var_names)==0 & length(nonsig_cat_var_names)>0 ~ paste(" For categorical variables (",paste(nonsig_cat_var_names, collapse = ", "),") there is not sufficient evidence of an association between the grouping variable and the selected cateogrical variable.",sep = ""),
+    #                                                                                                                                                                   .default = paste(" For continuous variables (",paste(nonsig_cont_var_names, collapse = ", "),") this means there is not a statistically significant difference in the means of any group level."," For categorical variables (",paste(nonsig_cat_var_names, collapse = ", "),") this indicates there is not sufficient evidence of an association between the grouping variable and the selected cateogrical variable.",sep = "")), sep = ""))
+    # 
     #var_means<-extract_cells(gtObject(), rows = starts_with("Mean"))
     
     # no_grp_var_txt<-0
@@ -532,7 +510,7 @@ server <- function(session, input, output) {
     # }
 
     switch(input$selectgrp,
-           None = helpText(paste("The summary statistics in the table must be interpreted in the context of the dataset uploaded.")),
+           None = helpText(paste("The summary statistics of the selected variables are listed as follows")),
            helpText(paste(pvals2,collapse = " "))
     )
   })
