@@ -263,7 +263,7 @@ ui <- navbarPage(theme = shinytheme("cerulean"), title = "Basic Statistics Calcu
                               tags$hr(),
                               
                               #Help text statement ----
-                              h4(strong('How to Cite')),
+                              h4(strong('References')),
                               
                               helpText(#h4(strong('References')),
                                        div("[1]",citation()),
