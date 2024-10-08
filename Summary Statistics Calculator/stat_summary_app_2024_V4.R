@@ -1,19 +1,20 @@
+#check needed packages, if not installed, install them
+list.of.packages <- c("shiny", "DT", "tidyverse", "readxl", "shinycssloaders", "dplyr", "shinythemes", "htmltools", "gtsummary", "gt")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
 #Required packages for the app ----
 library(shiny)
 library(DT)
 library(tidyverse)
-#library(hablar)
 library(readxl)
 library(shinycssloaders)
 library(dplyr)
 library(shinythemes)
 library(htmltools)
-#library(finalfit)
 library(gtsummary)
 library(gt)
-#library(gto)
-#library(rmarkdown)
-#library(officer)
+
 
 
 options(shiny.maxRequestSize = 60*1024^2)
@@ -472,4 +473,3 @@ server <- function(session, input, output) {
   
 } 
 
-shinyApp(ui = ui, server = server)
