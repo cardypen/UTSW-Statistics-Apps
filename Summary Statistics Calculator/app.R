@@ -1,6 +1,6 @@
-if (!requireNamespace("shiny", quietly = TRUE)) {
-  install.packages("shiny")
-}
+# if (!requireNamespace("shiny", quietly = TRUE)) {
+#   install.packages("shiny")
+# }
 
 library(shiny)
 
