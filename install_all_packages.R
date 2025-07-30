@@ -2,15 +2,26 @@
 
 required_packages <- c(
   "shiny",
+  "shinycssloaders",
+  "shinythemes",
   "DT",
   "tidyverse",
   "readxl",
-  "shinycssloaders",
   "dplyr",
-  "shinythemes",
   "htmltools",
   "gtsummary",
-  "gt"
+  "gt",
+  "usethis",
+  "remotes",
+  "here",
+  "irr",
+  "vcd",
+  "boot",
+  "DescTools",
+  "BlandAltmanLeh",
+  "gridExtra",
+  "grDevices",
+  "MRMCsamplesize"
 )
 
 # Function to check and install packages
@@ -20,5 +31,11 @@ install_if_missing <- function(package) {
     install.packages(package)
   }
 }
+
+
 # Install all required packages
 invisible(lapply(required_packages, install_if_missing))
+
+remotes::install_github("Mathematinho/blandPower")
+
+if(!requireNamespace("rel")) install.packages(here::here("rel_1.4.2.tar.gz"), repos = NULL, type = "source")
