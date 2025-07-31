@@ -63,7 +63,18 @@ required_packages <- collect_libraries(dirname(getwd()))
 
 install_if_missing <- function(package) {
   if (!requireNamespace(package, quietly = TRUE)) {
-    install.packages(package)
+    # Get list of available packages from CRAN (only once)
+    if (!exists(".cran_pkgs", envir = .GlobalEnv)) {
+      assign(".cran_pkgs", rownames(available.packages()), envir = .GlobalEnv)
+    }
+    
+    # Check if the package is in CRAN
+    if (package %in% get(".cran_pkgs", envir = .GlobalEnv)) {
+      message("Installing ", package, " from CRAN...")
+      install.packages(package)
+    } else {
+      message("Skipping ", package, ": not available on CRAN.")
+    }  
   }
 }
 
