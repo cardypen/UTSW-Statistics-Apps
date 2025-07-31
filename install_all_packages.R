@@ -22,7 +22,8 @@ required_packages <- c(
   "gridExtra",
   "grDevices",
   "MRMCsamplesize",
-  "Hmisc"
+  "Hmisc",
+  "hablar"
 )
 
 # Function to check and install packages
