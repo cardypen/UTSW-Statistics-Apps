@@ -4,6 +4,7 @@ required_packages <- c(
   "shiny",
   "shinycssloaders",
   "shinythemes",
+  "shinyjs",
   "DT",
   "tidyverse",
   "readxl",
@@ -11,6 +12,7 @@ required_packages <- c(
   "htmltools",
   "gtsummary",
   "gt",
+  "ggpubr",
   "usethis",
   "remotes",
   "here",
@@ -23,7 +25,9 @@ required_packages <- c(
   "grDevices",
   "MRMCsamplesize",
   "Hmisc",
-  "hablar"
+  "hablar",
+  "psych",
+  "writexl"
 )
 
 # Function to check and install packages
