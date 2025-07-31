@@ -21,7 +21,8 @@ required_packages <- c(
   "BlandAltmanLeh",
   "gridExtra",
   "grDevices",
-  "MRMCsamplesize"
+  "MRMCsamplesize",
+  "Hmisc"
 )
 
 # Function to check and install packages
