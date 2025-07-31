@@ -1,34 +1,63 @@
 #install all packages here
 
-required_packages <- c(
-  "shiny",
-  "shinycssloaders",
-  "shinythemes",
-  "shinyjs",
-  "DT",
-  "tidyverse",
-  "readxl",
-  "dplyr",
-  "htmltools",
-  "gtsummary",
-  "gt",
-  "ggpubr",
-  "usethis",
-  "remotes",
-  "here",
-  "irr",
-  "vcd",
-  "boot",
-  "DescTools",
-  "BlandAltmanLeh",
-  "gridExtra",
-  "grDevices",
-  "MRMCsamplesize",
-  "Hmisc",
-  "hablar",
-  "psych",
-  "writexl"
-)
+
+if (!requireNamespace("stringr", quietly = TRUE)) {
+  install.packages("stringr")
+}
+# Load necessary library
+library(stringr)
+
+# Function to extract package names from library() calls
+extract_libraries <- function(file) {
+  lines <- readLines(file, warn = FALSE)
+  libs <- str_match(lines, "library\\((['\"]?)([A-Za-z0-9\\.]+)\\1\\)")
+  unique(na.omit(libs[,3]))
+}
+
+# Main function to collect all library calls
+collect_libraries <- function(root_dir = ".") {
+  # Get all .R files recursively
+  r_files <- list.files(root_dir, pattern = "\\.R$", recursive = TRUE, full.names = TRUE)
+  
+  # Extract libraries from each file
+  lib_list <- lapply(r_files, extract_libraries)
+  
+  # Combine and get unique package names
+  unique(unlist(lib_list))
+}
+
+# Example usage
+required_packages <- collect_libraries(dirname(getwd()))
+
+# required_packages <- c(
+#   "shiny",
+#   "shinycssloaders",
+#   "shinythemes",
+#   "shinyjs",
+#   "DT",
+#   "tidyverse",
+#   "readxl",
+#   "dplyr",
+#   "htmltools",
+#   "gtsummary",
+#   "gt",
+#   "ggpubr",
+#   "usethis",
+#   "remotes",
+#   "here",
+#   "irr",
+#   "vcd",
+#   "boot",
+#   "DescTools",
+#   "BlandAltmanLeh",
+#   "gridExtra",
+#   "grDevices",
+#   "MRMCsamplesize",
+#   "Hmisc",
+#   "hablar",
+#   "psych",
+#   "writexl"
+# )
 
 # Function to check and install packages
 
