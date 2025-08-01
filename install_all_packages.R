@@ -71,7 +71,7 @@ install_if_missing <- function(package) {
     # Check if the package is in CRAN
     if (package %in% get(".cran_pkgs", envir = .GlobalEnv)) {
       message("Installing ", package, " from CRAN...")
-      install.packages(package)
+      install.packages(package,dependencies = T)
     } else {
       message("Skipping ", package, ": not available on CRAN.")
     }  
