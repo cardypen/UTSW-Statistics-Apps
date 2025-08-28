@@ -247,10 +247,10 @@ server <- function(input, output) {
                     R = input$ratio,
                     r1 = 0.47,
                     power = input$power,
-                    alpha = case_when(input$hypothesis == "Non-equivalence" ~ 0.05/2,
-                                      input$hypothesis == "Equivalence" ~ 0.05/2,
-                                      input$hypothesis == "Superiority" ~ 0.05,
-                                      input$hypothesis == "Non-inferiority" ~ 0.05))
+                    alpha = case_when(input$hypothesis == "Non-equivalence" ~ 0.05,
+                                      input$hypothesis == "Equivalence" ~ 0.05,
+                                      input$hypothesis == "Superiority" ~ 0.1,
+                                      input$hypothesis == "Non-inferiority" ~ 0.1))
   })
   
   output$samplesize <- render_gt({
