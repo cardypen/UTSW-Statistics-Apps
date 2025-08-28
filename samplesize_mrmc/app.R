@@ -75,6 +75,20 @@ ui <- navbarPage(theme = shinytheme("cerulean"), title = "MRMC Sample Size Calcu
                               ),
                             
                             mainPanel(
+                              
+                              h4(strong('Background:')),
+                              
+                              helpText('Multi-Reader Multi-Case (MRMC) study designs are commonly used to assess how well diagnostic
+                                       imaging tests work by involving multiple readers and multiple cases. These studies help compare
+                                       the accuracy of different imaging methods while accounting for differences between readers. 
+                                       Typically, every reader reviews every case using each test, which is known as a fully-crossed design.
+                                       For each image, readers give a confidence score on how likely they think disease is present. 
+                                       These scores are then compared to the binary reference standard (disease or no disease). 
+                                       To summarize how well a test performs, researchers often use tools like the ROC 
+                                       (receiver operating characteristic) curve and the AUC (area under the curve), which reflect
+                                       the test’s ability to distinguish between disease and non-disease cases.'),
+                              
+                              
                               h4(strong('Sample Size:')),
 
                               
@@ -236,7 +250,7 @@ server <- function(input, output) {
                     alpha = case_when(input$hypothesis == "Non-equivalence" ~ 0.05/2,
                                       input$hypothesis == "Equivalence" ~ 0.05/2,
                                       input$hypothesis == "Superiority" ~ 0.05,
-                                      input$hypothesis == "Non-inferiority" ~ 0.025))
+                                      input$hypothesis == "Non-inferiority" ~ 0.05))
   })
   
   output$samplesize <- render_gt({
