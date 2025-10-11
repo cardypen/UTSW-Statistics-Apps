@@ -9,6 +9,7 @@ library(readxl)
 library(shinycssloaders)
 library(rel)
 library(shinythemes)
+library(irrCAC)
 
 # Kripp.boot is used for nominal and ordinal caluclations because it is faster than the original method using kripp.alpha
 
@@ -419,754 +420,247 @@ ui <- navbarPage(theme = shinytheme("cerulean"), title = "Multi-variable Rater A
 )
 
 ##########################   Interface Outputs   ######################################
-
 server <- function(session, input, output) {
   
-  #If Excel sheet uploaded, updates what tab is analyzed upon user selection ----
+  # Update tab selection when Excel uploaded ----
   observeEvent(input$dataset2, {
-    updateSelectInput(session, "selecttab", choices=excel_sheets(input$dataset2$datapath))})
+    updateSelectInput(session, "selecttab", 
+                      choices = excel_sheets(input$dataset2$datapath))
+  })
   
-  #Load in excel data and have it continuously react to user changes ----
+  # Load Excel data reactively ----
   data2 <- reactive({
-    req(input$dataset2,input$selecttab)
-    if (length(input$selecttab)<2){
-      read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)][[1]] 
-       } else {
-      as.data.frame(read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)]) 
-      }
+    req(input$dataset2, input$selecttab)
+    sheets <- read_excel_allsheets(input$dataset2$datapath)[input$selecttab]
+    if (length(input$selecttab) < 2) sheets[[1]] else as.data.frame(sheets)
   })
   
-  #Users select scales for each variable in selected tabs ----
-  
+  # Update variable selections ----
   observeEvent(data2(), {
-    updateSelectInput(session, "variablecon", choices=colnames(read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)][[1]]))})
-  
-  observeEvent(c(data2(),input$variablecon), {
-    updateSelectInput(session, "variableord", choices=colnames(read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)][[1]][, colnames(read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)][[1]] ) %!in% c(input$variablecon)]))})
-  
-  observeEvent(c(data2(),input$variablecon,input$variableord), {
-    updateSelectInput(session, "variablenom", choices=colnames(read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)][[1]][, colnames(read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)][[1]] ) %!in% c(input$variablecon,input$variableord)]))})
-  
-  
-  #Outputs the initial XLS table of updated filters---
-  output$mytable2  <- DT::renderDataTable(data2(), filter = "top",options = list(scrollX = TRUE))
-  
-  
-############################ Error Messages #################################
-  
-  #Error for potential character values----
-  output$charerror1 <- eventReactive(c(input$variablecon,input$variableord), {
-    errmessage1 <- ""
-    req(input$selecttab)
-    
-    if (length(c(input$variablecon, input$variableord)) > 1){
-      if (length(input$selecttab) > 1) {
-              raw.data <- as.data.frame(read_excel_allsheets(input$dataset2$datapath)[input$selecttab][[1]])
-              for (j in 1:length(c(input$variablecon, input$variableord))){
-                if (is.factor(raw.data[, colnames(raw.data) %in% c(input$variablecon, input$variableord)][,j]) || is.character(raw.data[, colnames(raw.data) %in% c(input$variablecon, input$variableord)][,j])) {
-                  errmessage1 <- "Caution: A variable is selected as continuous or ordinal 
-                            that may contain text/non-numeric values. If 
-                            errors occurred in the Analysis tab, check to ensure all selected 
-                            continuous and ordinal variables are numeric. If no errors ocurred in the 
-                            Anlaysis tab, then you may ignore this caution."
-                  } else {
-                    errmessage1
-                }}
-      } else {
-        errmessage1
-      }
-    } else {
-      if (length(input$selecttab) > 1) {
-        raw.data <- as.data.frame(read_excel_allsheets(input$dataset2$datapath)[input$selecttab][[1]])
-          if (is.factor(raw.data[, colnames(raw.data) %in% c(input$variablecon, input$variableord)]) || is.character(raw.data[, colnames(raw.data) %in% c(input$variablecon, input$variableord)])) {
-            errmessage1 <- "Caution: A variable is selected as continuous or ordinal 
-                            that may contain text/non-numeric values. If 
-                            errors occurred in the Analysis tab, check to ensure all selected 
-                            continuous and ordinal variables are numeric. If no errors ocurred in the 
-                            Anlaysis tab, then you may ignore this caution."
-          } else {
-            errmessage1
-          }
-      } else {
-        errmessage1
-      }
-    }
-  errmessage1
-})
-
-  
-  #Error for chosing only a single rater ----
-  output$raterror1 <- eventReactive(c(input$variablecon,input$variableord,input$variablenom), {
-    errmessage11 <- ""
-    if (length(input$selecttab) ==1) {
-      errmessage11 <- "Error: Only one rater was selected for 
-      Variable. Two or more raters are needed 
-      for agreement calculations."
-    } else {
-      errmessage11 
-    }
+    cols <- colnames(read_excel_allsheets(input$dataset2$datapath)[input$selecttab][[1]])
+    updateSelectInput(session, "variablecon", choices = cols)
   })
   
-###################### Analsyis for Two Raters ##########################################
+  observeEvent(c(data2(), input$variablecon), {
+    cols <- colnames(read_excel_allsheets(input$dataset2$datapath)[input$selecttab][[1]])
+    remaining <- cols[!(cols %in% input$variablecon)]
+    updateSelectInput(session, "variableord", choices = remaining)
+  })
   
-  #Creating results table for variables in two rater analsyis ----
+  observeEvent(c(data2(), input$variablecon, input$variableord), {
+    cols <- colnames(read_excel_allsheets(input$dataset2$datapath)[input$selecttab][[1]])
+    remaining <- cols[!(cols %in% c(input$variablecon, input$variableord))]
+    updateSelectInput(session, "variablenom", choices = remaining)
+  })
+  
+  # Display data table ----
+  output$mytable2 <- DT::renderDataTable(
+    data2(), filter = "top", options = list(scrollX = TRUE)
+  )
+  
+  ############################ Error Messages #################################
+  
+  # Character value warning ----
+  output$charerror1 <- eventReactive(c(input$variablecon, input$variableord), {
+    req(input$selecttab)
+    if (length(input$selecttab) <= 1) return("")
+    
+    check_vars <- c(input$variablecon, input$variableord)
+    if (length(check_vars) == 0) return("")
+    
+    raw.data <- as.data.frame(read_excel_allsheets(input$dataset2$datapath)[input$selecttab][[1]])
+    selected_cols <- raw.data[, colnames(raw.data) %in% check_vars, drop = FALSE]
+    
+    has_text <- any(sapply(selected_cols, function(x) is.factor(x) || is.character(x)))
+    
+    if (has_text) {
+      "Caution: A variable is selected as continuous or ordinal that may contain text/non-numeric values. 
+       If errors occurred in the Analysis tab, check to ensure all selected continuous and ordinal 
+       variables are numeric. If no errors occurred in the Analysis tab, you may ignore this caution."
+    } else ""
+  })
+  
+  # Single rater error ----
+  output$raterror1 <- eventReactive(
+    c(input$variablecon, input$variableord, input$variablenom), {
+      if (length(input$selecttab) == 1) {
+        "Error: Only one rater was selected. Two or more raters are needed for agreement calculations."
+      } else ""
+    })
+  
+  ############################ Analysis Function ################################
+  
+  # Helper function to format output with CI
+  format_with_ci <- function(value, lb, ub) {
+    if (is.na(value) || value == "-") return("-")
+    if (lb == "-" || ub == "-") return(paste0(value))
+    paste0(value, " (", lb, ", ", ub, ")")
+  }
+  
+  # Main analysis function for all variables
+  analyze_variable <- function(raw.data1, varname, var_type, ratnames, n_raters) {
+    
+    output_row <- vector("list", 8)
+    output_row[[1]] <- varname
+    output_row[[2]] <- n_raters
+    output_row[[3]] <- paste(ratnames, collapse = ", ")
+    output_row[[4]] <- var_type
+    
+    # Initialize all as empty
+    output_row[5:8] <- ""
+    
+    if (var_type == "Continuous") {
+      # Continuous analysis ----
+      raw.data1 <- sapply(raw.data1, as.numeric)
+      
+      # Adjust for negative values if needed
+      raw.data1.ratio <- raw.data1 + max(abs(raw.data1) - raw.data1, na.rm = TRUE) / 2
+      
+      # ICC
+      icc_res <- tryCatch({
+        icc_obj <- irr::icc(raw.data1, model = "twoway", type = "agreement")
+        list(value = round(icc_obj$value, 2),
+             lb = round(icc_obj$lbound, 2),
+             ub = round(icc_obj$ubound, 2))
+      }, error = function(e) list(value = "-", lb = "-", ub = "-"))
+      
+      if (is.nan(icc_res$value) || icc_res$value == 1 || icc_res$value <= -1) {
+        icc_res$lb <- icc_res$ub <- "-"
+      }
+      
+      output_row[[5]] <- format_with_ci(icc_res$value, icc_res$lb, icc_res$ub)
+      
+    } else if (var_type == "Ordinal") {
+      # Ordinal analysis ----
+      raw.data1 <- sapply(raw.data1, as.numeric)
+      
+      # ICC
+      icc_res <- tryCatch({
+        icc_obj <- irr::icc(raw.data1, model = "twoway", type = "agreement")
+        list(value = round(icc_obj$value, 2),
+             lb = round(icc_obj$lbound, 2),
+             ub = round(icc_obj$ubound, 2))
+      }, error = function(e) list(value = "-", lb = "-", ub = "-"))
+      
+      if (is.nan(icc_res$value) || icc_res$value == 1 || icc_res$value <= -1) {
+        icc_res$lb <- icc_res$ub <- "-"
+      }
+      
+      output_row[[5]] <- format_with_ci(icc_res$value, icc_res$lb, icc_res$ub)
+      
+      # Conger's Kappa (weighted quadratic) using irrCAC
+      kappa_res <- tryCatch({
+        kappa_obj <- irrCAC::conger.kappa.raw(raw.data1, weights = "quadratic")$est
+        paste(round(kappa_obj$coeff.val,2),kappa_obj$conf.int)
+        
+      }, error = function(e) "-")
+      
+      output_row[[6]] <- kappa_res
+      
+      # Gwet's AC1
+      ac1_res <- tryCatch({
+        ac1_obj <- irrCAC::gwet.ac1.raw(raw.data1)$est
+        paste(round(ac1_obj$coeff.val,2),ac1_obj$conf.int)
+      }, error = function(e) "-")
+      
+      output_row[[7]] <- ac1_res
+      
+      # Gwet's AC2 (weighted)
+      ac2_res <- tryCatch({
+        ac2_obj <- irrCAC::gwet.ac1.raw(raw.data1)$est
+        paste(round(ac2_obj$coeff.val,2),ac2_obj$conf.int)
+      }, error = function(e) "-")
+      
+      output_row[[8]] <- ac2_res
+      
+    } else if (var_type == "Nominal") {
+      # Nominal analysis ----
+      raw.data1 <- sapply(raw.data1, as.factor)
+      
+      # Conger's Kappa (unweighted) using irrCAC
+      kappa_res <- tryCatch({
+        kappa_obj <- irrCAC::conger.kappa.raw(raw.data1, weights = "unweighted")
+        paste(round(kappa_obj$coeff.val,2),kappa_obj$conf.int)
+
+      }, error = function(e) "-")
+      
+      output_row[[6]] <- kappa_res
+      
+      # Gwet's AC1
+      ac1_res <- tryCatch({
+        ac1_obj <- irrCAC::gwet.ac1.raw(raw.data1)$est
+        paste(round(ac1_obj$coeff.val,2),ac1_obj$conf.int)
+        
+      }, error = function(e) "-")
+      
+      output_row[[7]] <- ac1_res
+    }
+    
+    return(output_row)
+  }
+  
+  ############################ Combined Results Table ############################
+  
   output$resultsvar <- DT::renderDataTable({
-    
-    #Wait until inputs have been selected before initiating further code ----
+    output$resultsvar2 <- NULL  # Clear other output
     req(input$selecttab)
     
-    #Check if only two raters ----
-    if (length(c(input$selecttab)) == 2) {
+    raw.data <- as.data.frame(
+      read_excel_allsheets(input$dataset2$datapath)[input$selecttab]
+    )[input$mytable2_rows_all, ]
     
-    # Varibales needed for indexing and final table outputs ----
-    raw.data <- as.data.frame(read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)])[input$mytable2_rows_all,]
-    numbervars <- dim((read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)])[[1]])[2]
-    numbersubs <- dim((read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)])[[1]])[1]
-    ratnames <- numeric(length(c(input$selecttab)))
-
-    # The J for loop cycles through all variables and much of the program is contained in the J loop ----
-    for (j in 1:numbervars){
-      raw.data1 <- raw.data[,c(j)]
-      ratnames[1] <- colnames(raw.data)[j]
+    n_vars <- ncol(read_excel_allsheets(input$dataset2$datapath)[input$selecttab][[1]])
+    n_raters <- length(input$selecttab)
+    
+    # Process all variables
+    all_vars <- colnames(read_excel_allsheets(input$dataset2$datapath)[input$selecttab][[1]])
+    results_list <- lapply(seq_along(all_vars), function(j) {
+      varname <- all_vars[j]
       
-      # The K for builds the filtered data frame to be analyzed depending on how many raters are selected ----
-      for (k in 1:(length(c(input$selecttab))-1)) {
-        raw.data1 <- cbind(raw.data1, raw.data[,c(j+k*numbervars)])
-        ratnames[k+1] <- colnames(raw.data)[j+k*numbervars]
+      # Determine variable type
+      var_type <- if (varname %in% input$variablecon) {
+        "Continuous"
+      } else if (varname %in% input$variableord) {
+        "Ordinal"
+      } else if (varname %in% input$variablenom) {
+        "Nominal"
+      } else {
+        NULL
       }
-
-      #Filtered dataset to be analyzed depending on which variable we are on in the J loop ----
-      raw.data1 <- as.data.frame(raw.data1)
-
       
-      #Current J loop variable name for checking on whether to run cont. ordinal or nominal analysis (or none) ----
-      varname <- colnames(read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)][[1]])[j]
-
+      if (is.null(var_type)) return(NULL)
       
-        if (varname %in% input$variablecon) {
-          
-          # Continuous data analysis output ----
-          
-          raw.data1 <- sapply(raw.data1,as.numeric)
-          
-          # This adjusts the user data if negatives are present since Kripps Alpha Ratio cannot potentially handle negative data ----
-          raw.data1.ratio <- raw.data1+max(abs(raw.data1)-raw.data1, na.rm = TRUE)/2
-          
-          #ICC agreement calculations ----
-          iccra <- round(irr::icc(raw.data1, model="twoway",type="agreement")$value, digits = 2)
-          if (is.nan(iccra)==TRUE){
-            iccra <- "1"
-            icccilba <- "-"
-            iccciuba <- "-"
-          } else {
-            if (iccra==1 | iccra<=-1){
-              icccilba <- "-"
-              iccciuba <- "-"
-            } else {
-              icccilba <- round(irr::icc(raw.data1, model="twoway",type="agreement")$lbound, digits = 2)
-              iccciuba <- round(irr::icc(raw.data1, model="twoway",type="agreement")$ubound, digits = 2)
-            }
-          }
-          
-          if (input$alphayes == 1){
-          
-            set.seed(2020)
-            #Krippendorff ratio calculations - kripp.boot() experiences errors at times with continuous variables
-            krippra <- round(kripp.alpha(t(as.matrix(raw.data1.ratio)),method = c("ratio"))$value, digits = 2)
-            #krippr <- kripp.boot(t(as.matrix(raw.data1.ratio)),iter =1000, method = c("ratio"))
-            #krippra <- round(krippr[[1]], digits = 2)
-              if (is.nan(krippra)==TRUE){
-                krippra <- "1"
-                kripprlb <- "-"
-                kripprub <- "-"
-              } else {
-                if (krippra==1 | krippra<=-1){
-                  kripprlb <- "-"
-                  kripprub <- "-"
-                } else {
-                  b <- boot(data = raw.data1.ratio, statistic = alpha.boot.r, R = 1000)
-                  kripprlb <- try(boot.ci(b, type = "perc")$percent[4], silent=TRUE)
-                  kripprub <- try(boot.ci(b, type = "perc")$percent[5], silent=TRUE)
-                  #kripprlb <- round(krippr[[3]], digits = 2)
-                  #kripprub <- round(krippr[[2]], digits = 2)
-                }
-              }
-            if ("NULL" %in% class(kripprlb) | "try-error" %in% class(kripprlb)| "NULL" %in% class(kripprub) | "try-error" %in% class(kripprub) | krippra==1 | krippra<=-1) {
-              kripprlb <- "-"
-              kripprub <- "-"
-            } else {
-              b <- boot(data = raw.data1.ratio, statistic = alpha.boot.r, R = 1000)
-              kripprlb <- round(boot.ci(b, type = "perc")$percent[4], digits = 2)
-              kripprub <- round(boot.ci(b, type = "perc")$percent[5], digits = 2)
-              #kripprlb <- round(krippr[[3]], digits = 2)
-              #kripprub <- round(krippr[[2]], digits = 2)
-            }
-          } else {
-            krippra <- "-"
-            kripprlb <- "-"
-            kripprub <- "-"
-          }
-          
-          
-          # Prepare the continuous part of output table
-          outputc <- numeric(9)
-          outputc[1] <- varname
-          outputc[2] <- length(input$selecttab)
-          outputc[3] <- paste(ratnames, collapse = ", ")
-          outputc[4] <- c("Continuous")
-          outputc[5] <- paste0(krippra," ", "(",kripprlb,","," ",kripprub,")")
-          outputc[6] <- paste0(iccra," ", "(",icccilba,","," ",iccciuba,")")
-          outputc[7] <- ""
-          outputc[8] <- ""
-          outputc[9] <- ""
-          tableoutputc <- rbind(tableoutputc, outputc)
-          
-        } else {
-          
-          if (varname %in% input$variableord) {
-            
-            # Ordinal data analysis ----
-            
-            raw.data1 <- sapply(raw.data1,as.numeric)
-
-            #ICC agreement calculations ----
-            iccra <- round(irr::icc(raw.data1, model="twoway",type="agreement")$value, digits = 2)
-            if (is.nan(iccra)==TRUE){
-              iccra <- "1"
-              icccilba <- "-"
-              iccciuba <- "-"
-            } else {
-              if (iccra==1 | iccra<=-1){
-                icccilba <- "-"
-                iccciuba <- "-"
-              } else {
-                icccilba <- round(irr::icc(raw.data1, model="twoway",type="agreement")$lbound, digits = 2)
-                iccciuba <- round(irr::icc(raw.data1, model="twoway",type="agreement")$ubound, digits = 2)
-              }
-            }
-
-            
-            #Weighted Quadratic Cohen calculations ----
-            f1<-as.factor(raw.data1[,1])
-            f2<-as.factor(raw.data1[,2])
-            
-            f1<-as.factor(f1)
-            f2<-as.factor(f2)
-
-            f1 <- factor(f1, levels = sort(c(levels(f1), levels(f2)[levels(f2)%!in%levels(f1)])))
-            f2 <- factor(f2, levels = sort(c(levels(f2), levels(f1)[levels(f1)%!in%levels(f2)])))
-            
-            cohenqk <- round(Kappa(table(f1,f2), weights = c("Fleiss-Cohen"))[[2]][1], digits = 2)
-            
-            if (is.nan(cohenqk)==TRUE){
-              cohenqk <- "1"
-              cohenqlb <- "-"
-              cohenqub <- "-"
-            } else {
-              if (cohenqk==1 | cohenqk<=-1){
-                cohenqlb <- "-"
-                cohenqub <- "-"
-              } else {
-                cohenqlb <- round(confint(Kappa(table(f1,f2), weights = c("Fleiss-Cohen")))[2], digits=2)
-                cohenqub <- round(confint(Kappa(table(f1,f2), weights = c("Fleiss-Cohen")))[4], digits=2)
-              }
-            }
-            
-            if (input$alphayes == 1){
-            
-            set.seed(2020)
-            #Krippendorff ordinal calculations - kripp.boot() used for ordinal and nominal for speed improvement
-            krippoa <- round(kripp.alpha(t(as.matrix(raw.data1)),method = c("ordinal"))$value, digits = 2)
-            #krippo <- kripp.boot(t(as.matrix(raw.data1)),iter =1000, method = c("ordinal"))
-            #krippoa <- round(krippo[[1]], digits = 2)
-              if (is.nan(krippoa)==TRUE){
-                krippoa <- "1"
-                krippolb <- "-"
-                krippoub <- "-"
-              } else {
-                if (krippoa==1 | krippoa<=-1){
-                  krippolb <- "-"
-                  krippoub <- "-"
-                } else {
-                  b <- boot(data = raw.data1, statistic = alpha.boot.o, R = 1000)
-                  krippolb <- try(boot.ci(b, type = "perc")$percent[4], silent=TRUE)
-                  krippoub <- try(boot.ci(b, type = "perc")$percent[5], silent=TRUE)
-                  #krippolb <- round(krippo[[3]], digits = 2)
-                  #krippoub <- round(krippo[[2]], digits = 2)
-                }
-              }
-                if ("NULL" %in% class(krippolb) | "try-error" %in% class(krippolb)| "NULL" %in% class(krippoub) | "try-error" %in% class(krippoub) | krippoa==1 | krippoa<=-1) {
-                  krippolb <- "-"
-                  krippoub <- "-"
-                  } else {
-                    b <- boot(data = raw.data1, statistic = alpha.boot.o, R = 1000)
-                    krippolb <- round(boot.ci(b, type = "perc")$percent[4], digits = 2)
-                    krippoub <- round(boot.ci(b, type = "perc")$percent[5], digits = 2)
-                    #krippolb <- round(krippo[[3]], digits = 2)
-                    #krippoub <- round(krippo[[2]], digits = 2)
-                  }
-            } else {
-              krippoa <- "-"
-              krippolb <- "-"
-              krippoub <- "-"
-            }
-              
-            
-            #Prepare ordinal outputs for final output table ----
-            outputo <- numeric(9)
-            outputo[1] <- varname
-            outputo[2] <- length(input$selecttab)
-            outputo[3] <- paste(ratnames, collapse = ", ")
-            outputo[4] <- c("Ordinal")
-            outputo[5] <- paste0(krippoa," ", "(",krippolb,","," ",krippoub,")")
-            outputo[6] <- paste0(iccra," ", "(",icccilba,","," ",iccciuba,")")
-            outputo[7] <- paste0(cohenqk," ", "(",cohenqlb,","," ",cohenqub,")")
-            outputo[8] <- ""
-            outputo[9] <- ""
-            tableoutputo <- rbind(tableoutputo, outputo)
-            
-            
-          } else {
-            
-            # Nominal data anlaysis ---- 
-            
-            if (varname %in% input$variablenom) {
-            
-            raw.data1 <- sapply(raw.data1,as.factor)
-            
-            #Cohen Simple calculations ----
-            f1<-as.factor(raw.data1[,1])
-            f2<-as.factor(raw.data1[,2])
-            
-            f1<-as.factor(f1)
-            f2<-as.factor(f2)
-            
-            f1 <- factor(f1, levels = sort(c(levels(f1), levels(f2)[levels(f2)%!in%levels(f1)])))
-            f2 <- factor(f2, levels = sort(c(levels(f2), levels(f1)[levels(f1)%!in%levels(f2)])))
-            
-            cohenk <- round(Kappa(table(f1,f2), weights = c("Equal-Spacing"))[[1]][1], digits = 2)
-            
-            if (is.nan(cohenk)==TRUE){
-              cohenk <- "1"
-              cohenlb <- "-"
-              cohenub <- "-"
-            } else {
-              if (cohenk==1 | cohenk<=-1){
-                cohenlb <- "-"
-                cohenub <- "-"
-              } else {
-                cohenlb <- round(confint(Kappa(table(f1,f2), weights = c("Equal-Spacing")))[1], digits = 2)
-                cohenub <- round(confint(Kappa(table(f1,f2), weights = c("Equal-Spacing")))[3], digits = 2)
-              }
-            }
-            
-            if (input$alphayes == 1){
-          
-            set.seed(2020)
-            #Krippendorff nominal calculations - kripp.boot() used for ordinal and nominal for speed improvement
-            krippna <- round(kripp.alpha(t(as.matrix(raw.data1)),method = c("nominal"))$value, digits = 2)
-            #krippn <- kripp.boot(t(as.matrix(raw.data1)),iter =1000, method = c("nominal"))
-            #krippna <- round(krippn[[1]], digits = 2)
-              if (is.nan(krippna)==TRUE){
-                krippna <- "1"
-                krippnlb <- "-"
-                krippnub <- "-"
-              } else {
-                if (krippna==1 | krippna<=-1){
-                  krippnlb <- "-"
-                  krippnub <- "-"
-                } else {
-                  b <- boot(data = raw.data1, statistic = alpha.boot.n, R = 1000)
-                  krippnlb <- try(boot.ci(b, type = "perc")$percent[4], silent=TRUE)
-                  krippnub <- try(boot.ci(b, type = "perc")$percent[5], silent=TRUE)
-                  #krippnlb <- round(krippn[[3]], digits = 2)
-                  #krippnub <- round(krippn[[2]], digits = 2)
-                }
-              }
-              if ("NULL" %in% class(krippnlb) | "try-error" %in% class(krippnlb)| "NULL" %in% class(krippnub) | "try-error" %in% class(krippnub) | krippna==1 | krippna<=-1) {
-                krippnlb <- "-"
-                krippnub <- "-"
-              } else {
-                b <- boot(data = raw.data1, statistic = alpha.boot.n, R = 1000)
-                krippnlb <- round(boot.ci(b, type = "perc")$percent[4], digits = 2)
-                krippnub <- round(boot.ci(b, type = "perc")$percent[5], digits = 2)
-                #krippnlb <- round(krippn[[3]], digits = 2)
-                #krippnub <- round(krippn[[2]], digits = 2)
-              }
-            } else {
-              krippna <- "-"
-              krippnlb <- "-"
-              krippnub <- "-"
-              }
-            
-            # Prepare nominal data output for final output table ----
-            outputn <- numeric(9)
-            outputn[1] <- varname
-            outputn[2] <- length(input$selecttab)
-            outputn[3] <- paste(ratnames, collapse = ", ")
-            outputn[4] <- c("Nominal")
-            outputn[5] <- paste0(krippna," ", "(",krippnlb,","," ",krippnub,")")
-            outputn[6] <- ""
-            outputn[7] <- ""
-            outputn[8] <- ""
-            outputn[9] <- paste0(cohenk," ", "(",cohenlb,","," ",cohenub,")")
-            tableoutputn <- rbind(tableoutputn, outputn)
-            
-            } else {
-              
-              #This section is empty - j loop ends here if variable was not categorized into a scale bucket by user ----
-              
-            }
-          
-          }
-          
-        }
-        
-  } #J for loop ends
-
-    # Merging all scale outputs into one data. First we have to do this initial trick so that everything can be handled as two dimiensional ----
-    tableoutputcc <- rbind(tableoutputc,numeric(9))
-    tableoutputoo <- rbind(tableoutputo,numeric(9))
-    tableoutputnn <- rbind(tableoutputn,numeric(9))
-
-    # Merging of tables. Note without the 'trick' above, it would be difficult to merge 1 dimensional outputs (say if users didnt select any nominal data) ----
-    tableoutput <- as.data.frame(rbind(tableoutputcc[-c(1,(length(c(input$variablecon))+2)),], 
-                            tableoutputoo[-c(1,(length(c(input$variableord))+2)),],
-                            tableoutputnn[-c(1,(length(c(input$variablenom))+2)),]))
-
-    #Labeling of final data table output ----
-    colnames(tableoutput) <- c("Variable Label", "Number of Raters", "Columns Compared", 
-                               "Measurement Scale", "Krippendorff's Alpha", "ICC (2-Way, Agreement)", 
-                               "Cohen's Weighted Kappa", "Conger's Kappa","Cohen's Kappa")
+      # Extract data for this variable across all raters
+      var_indices <- j + (0:(n_raters - 1)) * n_vars
+      raw.data1 <- raw.data[, var_indices, drop = FALSE]
+      ratnames <- colnames(raw.data)[var_indices]
+      
+      analyze_variable(raw.data1, varname, var_type, ratnames, n_raters)
+    })
+    
+    # Remove NULL entries and convert to data frame
+    results_list <- results_list[!sapply(results_list, is.null)]
+    tableoutput <- as.data.frame(do.call(rbind, results_list))
+    
+    # Set column names
+    colnames(tableoutput) <- c(
+      "Variable Label", "Number of Raters", "Columns Compared", 
+      "Measurement Scale", "ICC (2-Way, Agreement)", 
+      "Conger's Kappa", "Gwet's AC1", "Gwet's AC2"
+    )
     rownames(tableoutput) <- NULL
     
     datatable(
       tableoutput, extensions = 'Buttons', options = list(
         dom = 'Bfrtip',
         buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
-        pageLength =  100
+        pageLength = 100
       )
     )
-    
-  } else {
-   
-    # This is the initial if statment end. There is no output if number of raters >3. Goes to next section below instead.
-    
-  }
-    
   })
   
-################## Analsyis for 3+ Raters ###########################
-
-#Creating results table for variable 1 ----
-output$resultsvar2 <- DT::renderDataTable({
-  
-  #Wait until inputs have been selected before initiating further code ----
-  req(input$selecttab)
-  
-  #Check if more than two raters ----
-  if (length(c(input$selecttab)) > 2) {
-    
-    # Varibales needed for indexing and final table outputs ----
-    raw.data <- as.data.frame(read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)])[input$mytable2_rows_all,]
-    numbervars <- dim((read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)])[[1]])[2]
-    numbersubs <- dim((read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)])[[1]])[1]
-    ratnames <- numeric(length(c(input$selecttab)))
-    
-    # The J for loop cycles through all variables and much of the program is contained in the J loop ----
-    for (j in 1:numbervars){
-      raw.data1 <- raw.data[,c(j)]
-      ratnames[1] <- colnames(raw.data)[j]
-      
-      # The K for builds the filtered data frame to be analyzed depending on how many raters are selected ----
-      for (k in 1:(length(c(input$selecttab))-1)) {
-        raw.data1 <- cbind(raw.data1, raw.data[,c(j+k*numbervars)])
-        ratnames[k+1] <- colnames(raw.data)[j+k*numbervars]
-      }
-      
-      #Filtered dataset to be analyzed depending on which variable we are on in the J loop ----
-      raw.data1 <- as.data.frame(raw.data1)
-      
-      
-      #Current J loop variable name for checking on whether to run cont. ordinal or nominal analysis (or none) ----
-      varname <- colnames(read_excel_allsheets(input$dataset2$datapath)[c(input$selecttab)][[1]])[j]
-      
-      
-      if (varname %in% input$variablecon) {
-        
-        # Continuous data analysis output ----
-        
-        raw.data1 <- sapply(raw.data1,as.numeric)
-        
-        # This adjusts the user data if negatives are present since Kripps Alpha Ratio cannot potentially handle negative data ----
-        raw.data1.ratio <- raw.data1+max(abs(raw.data1)-raw.data1, na.rm = TRUE)/2
-        
-        #ICC agreement calculations ----
-        iccra <- round(irr::icc(raw.data1, model="twoway",type="agreement")$value, digits = 2)
-        if (is.nan(iccra)==TRUE){
-          iccra <- "1"
-          icccilba <- "-"
-          iccciuba <- "-"
-        } else {
-          if (iccra==1 | iccra<=-1){
-            icccilba <- "-"
-            iccciuba <- "-"
-          } else {
-            icccilba <- round(irr::icc(raw.data1, model="twoway",type="agreement")$lbound, digits = 2)
-            iccciuba <- round(irr::icc(raw.data1, model="twoway",type="agreement")$ubound, digits = 2)
-          }
-        }
-        
-        if (input$alphayes == 1){
-        
-          set.seed(2020)
-          #Krippendorff ratio calculations - kripp.boot() experiences errors at times with continuous variables
-          krippra <- round(kripp.alpha(t(as.matrix(raw.data1.ratio)),method = c("ratio"))$value, digits = 2)
-          #krippr <- kripp.boot(t(as.matrix(raw.data1.ratio)),iter =1000, method = c("ratio"))
-          #krippra <- round(krippr[[1]], digits = 2)
-          if (is.nan(krippra)==TRUE){
-            krippra <- "1"
-            kripprlb <- "-"
-            kripprub <- "-"
-          } else {
-            if (krippra==1 | krippra<=-1){
-              kripprlb <- "-"
-              kripprub <- "-"
-            } else {
-              b <- boot(data = raw.data1.ratio, statistic = alpha.boot.r, R = 1000)
-              kripprlb <- try(boot.ci(b, type = "perc")$percent[4], silent=TRUE)
-              kripprub <- try(boot.ci(b, type = "perc")$percent[5], silent=TRUE)
-              #kripprlb  <- round(krippr[[3]], digits = 2)
-              #kripprub <- round(krippr[[2]], digits = 2)
-            }
-          }
-          if ("NULL" %in% class(kripprlb) | "try-error" %in% class(kripprlb)| "NULL" %in% class(kripprub) | "try-error" %in% class(kripprub) | krippra==1 | krippra<=-1) {
-            kripprlb <- "-"
-            kripprub <- "-"
-          } else {
-            b <- boot(data = raw.data1.ratio, statistic = alpha.boot.r, R = 1000)
-            kripprlb <- round(boot.ci(b, type = "perc")$percent[4], digits = 2)
-            kripprub <- round(boot.ci(b, type = "perc")$percent[5], digits = 2)
-            #kripprlb  <- round(krippr[[3]], digits = 2)
-            #kripprub <- round(krippr[[2]], digits = 2)
-          }
-        } else {
-          krippra <- "-"
-          kripprlb <- "-"
-          kripprub <- "-"
-        }
-        
-        # Prepare the continuous part of output table ----
-        outputc <- numeric(9)
-        outputc[1] <- varname
-        outputc[2] <- length(input$selecttab)
-        outputc[3] <- paste(ratnames, collapse = ", ")
-        outputc[4] <- c("Continuous")
-        outputc[5] <- paste0(krippra," ", "(",kripprlb,","," ",kripprub,")")
-        outputc[6] <- paste0(iccra," ", "(",icccilba,","," ",iccciuba,")")
-        outputc[7] <- ""
-        outputc[8] <- ""
-        outputc[9] <- ""
-        tableoutputc <- rbind(tableoutputc, outputc)
-        
-      } else {
-        
-        if (varname %in% input$variableord) {
-          
-          # Ordinal data analysis ----
-          
-          raw.data1 <- sapply(raw.data1,as.numeric)
-          
-          
-          #ICC agreement calculations ----
-          iccra <- round(irr::icc(raw.data1, model="twoway",type="agreement")$value, digits = 2)
-          if (is.nan(iccra)==TRUE){
-            iccra <- "1"
-            icccilba <- "-"
-            iccciuba <- "-"
-          } else {
-            if (iccra==1 | iccra<=-1){
-              icccilba <- "-"
-              iccciuba <- "-"
-            } else {
-              icccilba <- round(irr::icc(raw.data1, model="twoway",type="agreement")$lbound, digits = 2)
-              iccciuba <- round(irr::icc(raw.data1, model="twoway",type="agreement")$ubound, digits = 2)
-            }
-          }
-          
-          if (input$alphayes == 1){
-          
-          set.seed(2020)
-          #Krippendorff ordinal calculations - kripp.boot() used for ordinal and nominal for speed improvement
-          krippoa <- round(kripp.alpha(t(as.matrix(raw.data1)),method = c("ordinal"))$value, digits = 2)
-          #krippo <- kripp.boot(t(as.matrix(raw.data1)),iter =1000, method = c("ordinal"))
-          #krippoa <- round(krippo[[1]], digits = 2)
-            if (is.nan(krippoa)==TRUE){
-              krippoa <- "1"
-              krippolb <- "-"
-              krippoub <- "-"
-            } else {
-              if (krippoa==1 | krippoa<=-1){
-                krippolb <- "-"
-                krippoub <- "-"
-              } else {
-                b <- boot(data = raw.data1, statistic = alpha.boot.o, R = 1000)
-                krippolb <- try(boot.ci(b, type = "perc")$percent[4], silent=TRUE)
-                krippoub <- try(boot.ci(b, type = "perc")$percent[5], silent=TRUE)
-                #krippolb <- round(krippo[[3]], digits = 2)
-                #krippoub <- round(krippo[[2]], digits = 2)
-              }
-            }
-            if ("NULL" %in% class(krippolb) | "try-error" %in% class(krippolb)| "NULL" %in% class(krippoub) | "try-error" %in% class(krippoub) | krippoa==1 | krippoa<=-1) {
-              krippolb <- "-"
-              krippoub <- "-"
-            } else {
-              b <- boot(data = raw.data1, statistic = alpha.boot.o, R = 1000)
-              krippolb <- round(boot.ci(b, type = "perc")$percent[4], digits = 2)
-              krippoub <- round(boot.ci(b, type = "perc")$percent[5], digits = 2)
-              #krippolb <- round(krippo[[3]], digits = 2)
-              #krippoub <- round(krippo[[2]], digits = 2)
-            }
-          } else{
-            krippoa <- "-"
-            krippolb <- "-"
-            krippoub <- "-"
-          }
-          
-          
-          #Prepare ordinal outputs for final output table ----
-          outputo <- numeric(9)
-          outputo[1] <- varname
-          outputo[2] <- length(input$selecttab)
-          outputo[3] <- paste(ratnames, collapse = ", ")
-          outputo[4] <- c("Ordinal")
-          outputo[5] <- paste0(krippoa," ", "(",krippolb,","," ",krippoub,")")
-          outputo[6] <- paste0(iccra, " ","(",icccilba,","," ",iccciuba,")")
-          outputo[7] <- ""
-          outputo[8] <- ""
-          outputo[9] <- ""
-          tableoutputo <- rbind(tableoutputo, outputo)
-          
-          
-        } else {
-          
-          # Nominal data anlaysis ---- 
-          
-          if (varname %in% input$variablenom) {
-            
-            raw.data1 <- sapply(raw.data1,as.factor)
-            
-            #Fleiss Kappa nominal calculations ----
-            fleissk <- round(as.numeric(ckap(raw.data1, conf.level = 0.95, R = 2000)[5]), digits = 2)
-            if (fleissk <1){
-              fleisscilb <- round(as.numeric(ckap(raw.data1, conf.level = 0.95, R = 2000)[8]), digits = 2)
-              fleissciub <- round(as.numeric(ckap(raw.data1, conf.level = 0.95, R = 2000)[9]), digits = 2)
-            } else {
-              fleisscilb <- 1
-              fleissciub <- 1
-            }
-            if (fleissciub > 1){
-              fleissciub <- 1
-            } else{
-              fleissciub<-fleissciub
-            }
-            
-            if (input$alphayes == 1){
-            
-            set.seed(2020)
-            #Krippendorff nominal calculations - kripp.boot() used for ordinal and nominal for speed improvement
-            krippna <- round(kripp.alpha(t(as.matrix(raw.data1)),method = c("nominal"))$value, digits = 2)
-            #krippn <- kripp.boot(t(as.matrix(raw.data1)),iter =1000, method = c("nominal"))
-            #krippna <- round(krippn[[1]], digits = 2)
-              if (is.nan(krippna)==TRUE){
-                krippna <- "1"
-                krippnlb <- "-"
-                krippnub <- "-"
-              } else {
-                if (krippna==1 | krippna<=-1){
-                  krippnlb <- "-"
-                  krippnub <- "-"
-                } else {
-                  b <- boot(data = raw.data1, statistic = alpha.boot.n, R = 1000)
-                  krippnlb <- try(boot.ci(b, type = "perc")$percent[4], silent=TRUE)
-                  krippnub <- try(boot.ci(b, type = "perc")$percent[5], silent=TRUE)
-                  #krippnlb <- round(krippn[[3]], digits = 2)
-                  #krippnub <- round(krippn[[2]], digits = 2)
-                }
-              }
-              if ("NULL" %in% class(krippnlb) | "try-error" %in% class(krippnlb)| "NULL" %in% class(krippnub) | "try-error" %in% class(krippnub) | krippna==1 | krippna<=-1) {
-                krippnlb <- "-"
-                krippnub <- "-"
-              } else {
-                b <- boot(data = raw.data1, statistic = alpha.boot.n, R = 1000)
-                krippnlb <- round(boot.ci(b, type = "perc")$percent[4], digits = 2)
-                krippnub <- round(boot.ci(b, type = "perc")$percent[5], digits = 2)
-                #krippnlb <- round(krippn[[3]], digits = 2)
-                #krippnub <- round(krippn[[2]], digits = 2)
-              }
-            } else{
-              krippna <- "-"
-              krippnlb <- "-"
-              krippnub <- "-"
-            }
-            
-            # Prepare nominal data output for final output table ----
-            outputn <- numeric(9)
-            outputn[1] <- varname
-            outputn[2] <- length(input$selecttab)
-            outputn[3] <- paste(ratnames, collapse = ", ")
-            outputn[4] <- c("Nominal")
-            outputn[5] <- paste0(krippna," ", "(",krippnlb,","," ",krippnub,")")
-            outputn[6] <- ""
-            outputn[7] <- ""
-            outputn[8] <- paste0(fleissk," ", "(",fleisscilb,","," ",fleissciub,")")
-            outputn[9] <- ""
-            tableoutputn <- rbind(tableoutputn, outputn)
-            
-          } else {
-            
-            #This section is empty - j loop ends here if variable was not categorized into a scale bucket by user ----
-            
-          }
-          
-        }
-        
-      }
-      
-    } #J for loop ends
-    
-    # Merging all scale outputs into one data. First we have to do this initial trick so that everything can be handled as two dimiensional ----
-    tableoutputcc <- rbind(tableoutputc,numeric(9))
-    tableoutputoo <- rbind(tableoutputo,numeric(9))
-    tableoutputnn <- rbind(tableoutputn,numeric(9))
-    
-    # Merging of tables. Note without the 'trick' above, it would be difficult to merge 1 dimensional outputs (say if users didnt select any nominal data) ----
-    tableoutput <- as.data.frame(rbind(tableoutputcc[-c(1,(length(c(input$variablecon))+2)),], 
-                                       tableoutputoo[-c(1,(length(c(input$variableord))+2)),],
-                                       tableoutputnn[-c(1,(length(c(input$variablenom))+2)),]))
-    
-    #Labeling of final data table output ----
-    colnames(tableoutput) <- c("Variable Label", "Number of Raters", "Columns Compared", 
-                               "Measurement Scale", "Krippendorff's Alpha", "ICC (2-Way, Agreement)", 
-                               "Cohen's Weighted Kappa", "Conger's Kappa","Cohen's Kappa")
-    rownames(tableoutput) <- NULL
-    
-    datatable(
-      tableoutput, extensions = 'Buttons', options = list(
-        dom = 'Bfrtip',
-        buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
-        pageLength =  100
-      )
-    )
-    
-  } else {
-    
-    # This is the initial if statment end. There is no output if number of raters >3. Goes to section above instead.
-    
-  }
-  
-})
-    
+  # Second output (kept for compatibility but will be NULL when first is populated)
+  output$resultsvar2 <- DT::renderDataTable({ NULL })
 }
 
 shinyApp(ui = ui, server = server)
