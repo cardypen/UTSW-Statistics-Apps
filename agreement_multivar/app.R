@@ -500,14 +500,14 @@ server <- function(session, input, output) {
   # Main analysis function for all variables
   analyze_variable <- function(raw.data1, varname, var_type, ratnames, n_raters) {
     
-    output_row <- vector("list", 8)
+    output_row <- vector("list", 9)
     output_row[[1]] <- varname
     output_row[[2]] <- n_raters
     output_row[[3]] <- paste(ratnames, collapse = ", ")
     output_row[[4]] <- var_type
     
     # Initialize all as empty
-    output_row[5:8] <- ""
+    output_row[5:9] <- ""
     
     if (var_type == "Continuous") {
       # Continuous analysis ----
@@ -555,15 +555,15 @@ server <- function(session, input, output) {
         
       }, error = function(e) "-")
       
-      output_row[[6]] <- kappa_res
+      output_row[[7]] <- kappa_res
       
-      # Gwet's AC1
-      ac1_res <- tryCatch({
-        ac1_obj <- irrCAC::gwet.ac1.raw(raw.data1)$est
-        paste(round(ac1_obj$coeff.val,2),ac1_obj$conf.int)
-      }, error = function(e) "-")
-      
-      output_row[[7]] <- ac1_res
+      # # Gwet's AC1
+      # ac1_res <- tryCatch({
+      #   ac1_obj <- irrCAC::gwet.ac1.raw(raw.data1)$est
+      #   paste(round(ac1_obj$coeff.val,2),ac1_obj$conf.int)
+      # }, error = function(e) "-")
+      # 
+      # output_row[[7]] <- ac1_res
       
       # Gwet's AC2 (weighted)
       ac2_res <- tryCatch({
@@ -571,7 +571,7 @@ server <- function(session, input, output) {
         paste(round(ac2_obj$coeff.val,2),ac2_obj$conf.int)
       }, error = function(e) "-")
       
-      output_row[[8]] <- ac2_res
+      output_row[[9]] <- ac2_res
       
     } else if (var_type == "Nominal") {
       # Nominal analysis ----
@@ -579,7 +579,7 @@ server <- function(session, input, output) {
       
       # Conger's Kappa (unweighted) using irrCAC
       kappa_res <- tryCatch({
-        kappa_obj <- irrCAC::conger.kappa.raw(raw.data1, weights = "unweighted")
+        kappa_obj <- irrCAC::conger.kappa.raw(raw.data1, weights = "unweighted")$est
         paste(round(kappa_obj$coeff.val,2),kappa_obj$conf.int)
 
       }, error = function(e) "-")
@@ -593,7 +593,7 @@ server <- function(session, input, output) {
         
       }, error = function(e) "-")
       
-      output_row[[7]] <- ac1_res
+      output_row[[8]] <- ac1_res
     }
     
     return(output_row)
@@ -646,7 +646,7 @@ server <- function(session, input, output) {
     colnames(tableoutput) <- c(
       "Variable Label", "Number of Raters", "Columns Compared", 
       "Measurement Scale", "ICC (2-Way, Agreement)", 
-      "Conger's Kappa", "Gwet's AC1", "Gwet's AC2"
+      "Conger's Kappa","Conger's weighted Kappa", "Gwet's AC1", "Gwet's AC2"
     )
     rownames(tableoutput) <- NULL
     
