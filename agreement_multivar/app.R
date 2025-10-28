@@ -289,69 +289,38 @@ ui <- navbarPage(theme = shinytheme("cerulean"), title = "Multi-variable Rater A
       # Horizontal line ----
       tags$hr(),
       
-      h4(strong("Cohen's Kappa (Unweighted)")),
+      h4(strong("Kappa and weighted Kappa")),
       
-      helpText("Best used for nominal scale variables with only two raters, Cohen's 
-                  Kappa measures the agreement between two raters who each classify N subjects 
-                  into C mutually exclusive categories, with the measure being corrected for 
-                  how often that the raters may agree by chance. If the two response variables 
-                  are viewed as two independent ratings of the N subjects, the kappa 
-                  coefficient is +1 when there is complete agreement of the raters. When 
-                  the observed agreement exceeds the chance-expected agreement, the kappa 
-                  coefficient is positive, and its magnitude reflects the strength of agreement. 
-                  When the observed agreement is less than the chance-expected agreement, the 
-                  kappa coefficient is negative. The minimum value of kappa is between -1 and 0, 
-                  depending on the dataset. A normal approximation of the standardized kappa statistic 
-                  is used for 95% confidence intervals."),
+      helpText("Kappa statistics are best used for nominal (unweighted) and ordinal (weighted) scale variables. 
+               Kappa is known as the \"chance corrected\" measure of agreement, 
+               as it accounts for the possibility that raters may agree purely by chance. 
+               Unlike simple percent agreement, kappa adjusts the observed agreement by comparing it to the expected agreement under random conditions, 
+               providing a more robust estimate of true inter-rater reliability.
+               However, kappa can be influenced by the prevalence of categories and may yield paradoxical results in situations when the prevalence is biased,
+               known as \"the kappa paradox.\" 
+               This essentially makes interpretation very difficult.
+               Weighted kappa is an extension of kappa that is used for ordinal data, 
+               where the degree of disagreement between raters is taken into account. 
+               Here we used the common quadratic weights.
+               We used Conger's kappa method to calculate both kappa and weighted kappa for multiple raters. When there are only two reader, it reduces to Cohen's kappa."),
                   
-     # Horizontal line ----
-     tags$hr(),
-      
-      h4(strong("Cohen's Weighted Kappa")),
-      
-      helpText("Cohen's Weighted Kappa is an extension of the unweighted Cohen's Kappa above that 
-                  can be applied to ordinal scale variables with only two raters. For ordinal data, 
-                  the difference in ratings by different raters can be quantified. The weighted 
-                  kappa statistic takes the difference into account. It yields a higher value 
-                  when the raters' responses correspond more closely, with the maximum scores 
-                  near 1 for perfect agreement. Conversely, a larger difference in two ratings 
-                  provides a lower value of the weighted kappa. Techniques for assigning weights to 
-                  the difference between categories can vary. This software provides quadratic weighting 
-                  as this is a common weighting system across many applications. 95% confidence intervals are calculated in the 
-                  same manner as the unweighted kappa above."),
-                  
-     # Horizontal line ----
-     tags$hr(),
-     
-     h4(strong("Conger's Generalized Kappa")),
-     
-     helpText("Conger's Kappa is similar in methodology to the unweighted Cohen's Kappa, but it 
-              allows for the measure of agreement of nominal variables for the case of more than 
-              two raters. For this reason, this software outputs the unweighted Cohen's Kappa for 
-              nominal variable analyses with only two raters, and outputs Conger's Kappa instead for analyses of more than 
-              two raters. Conger's Kappa can be interpreted as the extent to which the observed 
-              amount of agreement among all raters exceeds that which would be expected if all raters 
-              made their ratings completely at random. 95% confidence intervals are calculated via bootstrapping."),
+
      
      # Horizontal line ----
      tags$hr(),
       
-      h4(strong("Krippendorff's Alpha")),
+      h4(strong("Gwet's AC1 and AC2")),
       
-      helpText("Used for all measurement scales and for two or more raters, Krippendorff's 
-                  Alpha is a measure of observed disagreement relative to disagreement expected 
-                  by chance which has the advantages of being applicable to multiple raters, 
-                  and all relevant scale metrics. Alpha has a range of -1 to 1, 
-                  where 1 indicates perfect agreement, 0 indicates no agreement beyond chance, 
-                  and negative values indicate disagreement between raters. The 95% confidence interval 
-                  for alpha is derived via the resampling technique of bootstrapping as its asymptotic 
-                  distribution is unknown. Note that confidence intervals will be large if the data 
-                  is relatively uniform, meaning that all the values are the same exact value (e.g., all zeros) except for a few subjects."),
+      helpText("Gwet's AC1 and AC2 are reliability coefficients used to assess inter-rater agreement for nominal (AC1, unweighted) and ordinal (AC2, quadratic weighted) scale variables, respectively. 
+               They were developed to address some of the limitations associated with kappa statistics, particularly their sensitivity to category imbalance and marginal distributions.
+               Gwet's AC coefficients provide a more stable and reliable measure of agreement, especially in situations where the prevalence of categories is imbalanced.
+               Similar to kappa, Gwet's AC coefficients adjust for chance agreement, but they do so using a different assumption and statistical approach.
+               In fact, they have the opposite behavor of kappa in that they increase when the imbalance of categories increases. There is no clear guidance on wheter they are more appropriate than Kappa."),
      
      # Horizontal line ----
      tags$hr(),
      
-     h4(strong("Interpreting the Agreement Coefficient Values")),
+     h4(strong("Interpreting the Agreement Coefficient Values (may not apply to Gwet's AC1 and AC2)")),
      
      helpText("The suggested agreement coefficient interpretation below is adapted from Cicchetti DV, Guidelines, Criteria and Rules of Thumb for Evaluating Normed and Standardized Assessment Instruments in Psychology, Psychological Assessment, 1994."),
      helpText("- Excellent Agreement: 0.75 - 1.00 "),
