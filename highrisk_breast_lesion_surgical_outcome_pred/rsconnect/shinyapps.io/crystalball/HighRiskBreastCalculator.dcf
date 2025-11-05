@@ -1,0 +1,13 @@
+name: HighRiskBreastCalculator
+title: HighRiskBreastCalculator
+username:
+account: crystalball
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4014778
+bundleId: 6088310
+url: https://crystalball.shinyapps.io/HighRiskBreastCalculator/
+when: 1657554394.15938
+lastSyncTime: 1657554394.15938
+asMultiple: FALSE
+asStatic: FALSE
