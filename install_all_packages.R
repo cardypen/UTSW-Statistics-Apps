@@ -60,6 +60,7 @@ required_packages <- collect_libraries(dirname(getwd()))
 # )
 
 # Function to check and install packages
+update.packages()
 
 install_if_missing <- function(package) {
   if (!requireNamespace(package, quietly = TRUE)) {
