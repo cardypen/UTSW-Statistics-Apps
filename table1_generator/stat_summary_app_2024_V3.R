@@ -277,7 +277,7 @@ ui <- navbarPage(theme = shinytheme("cerulean"), title = "Basic Statistics Calcu
                               # Horizontal line ----
                               tags$hr(), 
                               
-                              h5(strong(tags$a(href="https://github.com/cardypen/UTSW-Statistics-Apps/blob/2bfc36cf458dfbb9a57c3eaee838179ab91cda15/stat_summary_app_2024_V2.R", "Click to explore source code")))
+                              h5(strong(tags$a(href="https://github.com/cardypen/UTSW-Statistics-Apps/blob/2bfc36cf458dfbb9a57c3eaee838179ab91cda15/stat_summary_app_2024_V3.R", "Click to explore source code")))
                               
                               ), position = "left" ),
                           
