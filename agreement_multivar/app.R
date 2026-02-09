@@ -10,6 +10,8 @@ library(shinycssloaders)
 library(rel)
 library(shinythemes)
 library(irrCAC)
+library(lme4)
+library(tidyverse)
 
 # Kripp.boot is used for nominal and ordinal caluclations because it is faster than the original method using kripp.alpha
 
@@ -469,14 +471,14 @@ server <- function(session, input, output) {
   # Main analysis function for all variables
   analyze_variable <- function(raw.data1, varname, var_type, ratnames, n_raters) {
     
-    output_row <- vector("list", 9)
+    output_row <- vector("list", 10)
     output_row[[1]] <- varname
     output_row[[2]] <- n_raters
     output_row[[3]] <- paste(ratnames, collapse = ", ")
     output_row[[4]] <- var_type
     
     # Initialize all as empty
-    output_row[5:9] <- ""
+    output_row[5:10] <- ""
     
     if (var_type == "Continuous") {
       # Continuous analysis ----
@@ -499,7 +501,31 @@ server <- function(session, input, output) {
       
       output_row[[5]] <- format_with_ci(icc_res$value, icc_res$lb, icc_res$ub)
       
-    } else if (var_type == "Ordinal") {
+      #reproducibility coefficient
+      rc_res <- tryCatch({
+        raw.data1.long <- as.data.frame(raw.data1) %>% mutate(id = 1:nrow(raw.data1)) %>%
+          pivot_longer(-id, names_to = "rater", values_to = "value")
+        rc_obj <-  lmer(value ~ (1|id), data = raw.data1.long)
+        boot_results <- bootMer(rc_obj , FUN = function(fit) {
+          return(as.data.frame(VarCorr(fit))[, "vcov"]) # Extract variance of random effects
+        }, nsim = 1000,seed=123) # Number of simulations
+        ci <- c(as.data.frame(VarCorr(rc_obj))[, "vcov"] %>% last,
+                quantile(boot_results$t[,2], probs = c(0.025, 0.975)))
+        ci <- round(2.77*sqrt(ci),2)
+
+        list(value = ci[1],
+             lb = ci[2],
+             ub = ci[3])
+
+      }, error = function(e) list(value = "-", lb = "-", ub = "-"))
+
+      if (is.nan(rc_res$value)) {
+        icc_res$lb <- icc_res$ub <- "-"
+      }
+      
+      output_row[[6]] <- format_with_ci(rc_res$value, rc_res$lb, rc_res$ub)
+
+      } else if (var_type == "Ordinal") {
       # Ordinal analysis ----
       raw.data1 <- sapply(raw.data1, as.numeric)
       
@@ -524,7 +550,7 @@ server <- function(session, input, output) {
         
       }, error = function(e) "-")
       
-      output_row[[7]] <- kappa_res
+      output_row[[8]] <- kappa_res
       
       # # Gwet's AC1
       # ac1_res <- tryCatch({
@@ -540,7 +566,7 @@ server <- function(session, input, output) {
         paste(round(ac2_obj$coeff.val,2),ac2_obj$conf.int)
       }, error = function(e) "-")
       
-      output_row[[9]] <- ac2_res
+      output_row[[10]] <- ac2_res
       
     } else if (var_type == "Nominal") {
       # Nominal analysis ----
@@ -553,7 +579,7 @@ server <- function(session, input, output) {
 
       }, error = function(e) "-")
       
-      output_row[[6]] <- kappa_res
+      output_row[[7]] <- kappa_res
       
       # Gwet's AC1
       ac1_res <- tryCatch({
@@ -562,7 +588,7 @@ server <- function(session, input, output) {
         
       }, error = function(e) "-")
       
-      output_row[[8]] <- ac1_res
+      output_row[[9]] <- ac1_res
     }
     
     return(output_row)
@@ -614,7 +640,7 @@ server <- function(session, input, output) {
     # Set column names
     colnames(tableoutput) <- c(
       "Variable Label", "Number of Raters", "Columns Compared", 
-      "Measurement Scale", "ICC (2-Way, Agreement)", 
+      "Measurement Scale", "ICC (2-Way, Agreement)", "Reproducibility/Repeatability Coefficient",
       "Conger's Kappa","Conger's weighted Kappa", "Gwet's AC1", "Gwet's AC2"
     )
     rownames(tableoutput) <- NULL
