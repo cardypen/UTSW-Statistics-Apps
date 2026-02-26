@@ -12,6 +12,9 @@ library(gtsummary)
 library(gt)
 library(MRMCsamplesize)
 
+# source functions for split plot sizing
+source("functions_moments.R")
+
 #Read in the data ----
 data_cross <- read_excel("samplesize_tab_auc_crossover.xlsx") %>% 
   separate_rows("No. Readers (Crossover)", "Patients with Lesions (Crossover)", sep = ",") %>%
@@ -36,6 +39,14 @@ ui <- navbarPage(theme = shinytheme("cerulean"), title = "MRMC Sample Size Calcu
                               selectInput("hypothesis", "Hypothesis", 
                                           choices = c("Non-equivalence", "Equivalence",
                                                       "Superiority", "Non-inferiority")),
+                              
+                              selectInput("design", "Study Design", 
+                                          choices = c("Fully Crossed","Paired Split Plot")),
+                              
+                              conditionalPanel(
+                                condition = "input.design == 'Paired Split Plot'",
+                                numericInput("groups", "Number of Split Plot Groups", value = 2)
+                              ),
                               
                               numericInput("readers", "Number of Readers", value = 5),
                               
