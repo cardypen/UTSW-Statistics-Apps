@@ -14,6 +14,7 @@ library(gt)
 library(gto)
 library(rmarkdown)
 library(officer)
+library(emmeans)
 
 source("https://raw.githubusercontent.com/cardypen/add_pairwise/refs/heads/main/add_pairwise.R")
 
