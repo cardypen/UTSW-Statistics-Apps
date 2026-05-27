@@ -1,0 +1,13 @@
+name: table1_generator
+title: table1_generator
+username: yinxistats
+account: yinxistats
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17423681
+bundleId: 12043606
+url: https://yinxistats.shinyapps.io/table1_generator/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData|archive/stat_summary_app_2024_V4.R|stat_summary_app_2024_V2.R|stat_summary_app_2024_V3.R
