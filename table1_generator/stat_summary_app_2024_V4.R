@@ -14,6 +14,7 @@ library(gt)
 library(gto)
 library(rmarkdown)
 library(officer)
+library(emmeans)
 
 source("https://raw.githubusercontent.com/cardypen/add_pairwise/refs/heads/main/add_pairwise.R")
 
@@ -34,7 +35,7 @@ read_excel_allsheets <- function(filename, tibble = FALSE) {
 ################################################################
 
 # Load user interface. A tab structure is used for this app ----
-ui <- navbarPage(theme = shinytheme("cerulean"), title = "Basic Statistics Calculator",
+ui <- navbarPage(theme = shinytheme("cerulean"), title = "Table 1 Generator",
                  
                  tabPanel(title = "Data Upload and Variable Selection",
                           

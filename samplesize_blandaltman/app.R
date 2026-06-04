@@ -3,7 +3,7 @@ library(tidyverse)
 library(shinycssloaders)
 library(shinythemes)
 
-#devtools::install_github("Mathematinho/blandPower")
+#devtools::install_github("nfultz/blandPower")
 library(blandPower)
 #install.packages("usethis")
 library(usethis)

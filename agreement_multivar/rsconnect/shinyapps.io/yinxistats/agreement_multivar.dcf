@@ -1,0 +1,12 @@
+name: agreement_multivar
+title: agreement_multivar
+username: yinxistats
+account: yinxistats
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17423400
+bundleId: 12043488
+url: https://yinxistats.shinyapps.io/agreement_multivar/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
